@@ -25,7 +25,7 @@ let validate3 input =
     if input.EMail = "" then fail "Email must not be blank"
     else ok input
 
-let combinedValidation = 
+let combinedValidation : Request -> RewindableResult<_,_,unit> = 
     // connect the two-tracks together
     validate1
     >> bind validate2
@@ -36,21 +36,21 @@ let ``should find empty name``() =
     { Name = ""
       EMail = "" }
     |> combinedValidation
-    |> shouldEqual (Bad [ "Name must not be blank" ])
+    |> shouldEqual (Bad( [ "Name must not be blank" ], []))
 
 [<Test>]
 let ``should find empty mail``() = 
     { Name = "Scott"
       EMail = "" }
     |> combinedValidation
-    |> shouldEqual (Bad [ "Email must not be blank" ])
+    |> shouldEqual ((Bad( [ "Email must not be blank" ], [])))
 
 [<Test>]
 let ``should find long name``() = 
     { Name = "ScottScottScottScottScottScottScottScottScottScottScottScottScottScottScottScottScottScottScott"
       EMail = "" }
     |> combinedValidation
-    |> shouldEqual (Bad [ "Name must not be longer than 50 chars" ])
+    |> shouldEqual (Bad( [ "Name must not be longer than 50 chars" ], []))
 
 [<Test>]
 let ``should not complain on valid data``() = 
@@ -82,7 +82,7 @@ let ``should not canonicalize invalid data``() =
     { Name = ""
       EMail = "SCOTT@CHESSIE.com" }
     |> usecase
-    |> shouldEqual (Bad [ "Name must not be blank" ])
+    |> shouldEqual (Bad( [ "Name must not be blank" ], []))
 
 // a dead-end function    
 let updateDatabase input =
@@ -90,8 +90,8 @@ let updateDatabase input =
 
 
 let log logF twoTrackInput = 
-    let success(x,msgs) = logF "DEBUG. Success so far."
-    let failure msgs = logF <| sprintf "ERROR. %A" msgs
+    let success(x,msgs,rs) = logF "DEBUG. Success so far."
+    let failure (msgs,rs) = logF <| sprintf "ERROR. %A" msgs
     eitherTee success failure twoTrackInput 
 
 let usecase2 logF = 

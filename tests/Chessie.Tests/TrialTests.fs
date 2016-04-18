@@ -24,44 +24,44 @@ let ``ofChoice if Choice2Of2 of list it should fail`` () =
 
 [<Test>]
 let ``mapFailure if success should discard warning`` () =
-    Ok (42,[1;2;3])
+    Ok (42,[1;2;3],[])
     |> Trial.mapFailure (fun _ -> ["err1"])
-    |> shouldEqual (Ok (42,[]))
+    |> shouldEqual (Ok (42,[],[]))
 
 [<Test>]
 let ``mapFailure if failure should map over error`` () =
     fail "error"
     |> Trial.mapFailure (fun _ -> [42])
-    |> shouldEqual (Bad [42])
+    |> shouldEqual (Bad([42],[]))
 
 [<Test>]
 let ``mapFailure if failure should map over list of errors`` () =
-    Bad ["err1"; "err2"]
+    Bad (["err1"; "err2"], [])
     |> Trial.mapFailure (fun errs -> errs |> List.map (function "err1" -> 42 | "err2" -> 43 | _ -> 0))
-    |> shouldEqual (Bad [42; 43])
+    |> shouldEqual (Bad([42; 43], []))
 
 [<Test>]
 let ``mapFailure if failure should replace errors with singleton list`` () =
-    Bad ["err1", "err2"]
+    Bad (["err1", "err2"],[])
     |> Trial.mapFailure (fun _ -> [42])
-    |> shouldEqual (Bad [42])
+    |> shouldEqual (Bad([42],[]))
 
 [<Test>]
 let ``mapFailure if failure should map over empty list of errors`` () =
-    Bad []
+    Bad ([],[])
     |> Trial.mapFailure (fun errs -> errs |> List.map (function "err1" -> 42 | "err2" -> 43 | _ -> 0))
-    |> shouldEqual (Bad [])
+    |> shouldEqual (Bad ([],[]))
 
 [<Test>]
 let ``tryCatch if failure should return exception`` () = 
     let ex = exn "error" 
     1 
     |> Trial.Catch (fun x -> raise ex) 
-    |> shouldEqual (Bad[ex])
+    |> shouldEqual (Bad([ex],[]))
         
 
 [<Test>]
 let ``tryCatch if success should return list`` () = 
     1 
     |> Trial.Catch id 
-    |> shouldEqual (Ok(1,[]))
+    |> shouldEqual (Ok(1,[],[]))
