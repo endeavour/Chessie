@@ -51,8 +51,8 @@ type RewindableResult<'TSuccess, 'TMessage, 'TRollback> =
     /// Converts the result into a string.
     override this.ToString() =
         match this with
-        | Ok(v,msgs,rollback) -> sprintf "OK: %A - %s" v (String.Join(Environment.NewLine, msgs |> Seq.map (fun x -> x.ToString())))
-        | Bad(msgs, rollback) -> sprintf "Error: %s" (String.Join(Environment.NewLine, msgs |> Seq.map (fun x -> x.ToString())))    
+        | Ok(v,msgs,_) -> sprintf "OK: %A - %s" v (String.Join(Environment.NewLine, msgs |> Seq.map (fun x -> x.ToString())))
+        | Bad(msgs,_) -> sprintf "Error: %s" (String.Join(Environment.NewLine, msgs |> Seq.map (fun x -> x.ToString())))    
 
 /// Basic combinators and operators for error handling.
 [<AutoOpen>]
@@ -147,7 +147,7 @@ module Trial =
     /// Maps a function over the existing error messages in case of failure. In case of success, the message type will be changed and warnings will be discarded but rollbacks will be conserved.
     let inline mapFailure f result =
         match result with
-        | Ok (v,warnings,rollback) -> Ok(v,[],rollback)
+        | Ok (v,_,rollback) -> Ok(v,[],rollback)
         | Bad (errs, rollbacks) -> Bad (f errs, rollbacks)
 
     /// Lifts a function into a RewindableResult and applies it on the given result.
@@ -287,10 +287,10 @@ module AsyncTrial =
             async.Delay(generator >> Async.ofAsyncRewindableResult) |> AR
         
         member __.Bind(asyncRewindableResult : AsyncRewindableResult<'a, 'msg, 'rollback>, binder : 'a -> AsyncRewindableResult<'b, 'msg, 'rollback>) : AsyncRewindableResult<'b, 'msg, 'rollback> = 
-            let fSuccess (value, msgs, rs) = 
+            let fSuccess (value, msgs, rollbacks) = 
                 value |> (binder
                           >> Async.ofAsyncRewindableResult
-                          >> Async.map (mergeMessages msgs))
+                          >> Async.map (mergeMessages msgs >> mergeRollbacks rollbacks))
             
             let fFailure errs = 
                 errs
@@ -335,15 +335,15 @@ type RewindableResultExtensions () =
     [<Extension>]
     static member inline Match(this, ifSuccess:Action<'TSuccess , ('TMessage list)>, ifFailure:Action<'TMessage list>) =
         match this with
-        | RewindableResult.Ok(x, msgs, rs) -> ifSuccess.Invoke(x,msgs)
-        | RewindableResult.Bad(msgs, rs) -> ifFailure.Invoke(msgs)
+        | RewindableResult.Ok(x, msgs, _) -> ifSuccess.Invoke(x,msgs)
+        | RewindableResult.Bad(msgs, _) -> ifFailure.Invoke(msgs)
     
     /// Allows pattern matching on RewindableResults from C#.
     [<Extension>]
     static member inline Either(this, ifSuccess:Func<'TSuccess , ('TMessage list),'TRewindableResult>, ifFailure:Func<'TMessage list,'TRewindableResult>) =
         match this with
-        | RewindableResult.Ok(x, msgs,rs) -> ifSuccess.Invoke(x,msgs)
-        | RewindableResult.Bad(msgs,rs) -> ifFailure.Invoke(msgs)
+        | RewindableResult.Ok(x, msgs,_) -> ifSuccess.Invoke(x,msgs)
+        | RewindableResult.Bad(msgs,_) -> ifFailure.Invoke(msgs)
 
     /// Lifts a Func into a RewindableResult and applies it on the given result.
     [<Extension>]
@@ -361,7 +361,7 @@ type RewindableResultExtensions () =
     [<Extension>]
     static member inline Flatten(this) : RewindableResult<seq<'TSuccess>,'TMessage,'TRollback>=
         match this with
-        | RewindableResult.Ok(values:RewindableResult<'TSuccess,'TMessage,'TRollback> seq, _msgs:'TMessage list, rollbacks:'TRollback list) -> 
+        | RewindableResult.Ok(values:seq<RewindableResult<'TSuccess,'TMessage,'TRollback>>, _:List<'TMessage>, _:List<'TRollback>) -> 
             match collect values with
             | RewindableResult.Ok(values,msgs,rs) -> Ok(values |> List.toSeq,msgs,rs)
             | RewindableResult.Bad(msgs:'TMessage list, rs:'TRollback list) -> Bad (msgs,rs)
@@ -388,15 +388,15 @@ type RewindableResultExtensions () =
     [<Extension>]
     static member inline FailedWith(this:RewindableResult<'TSuccess, 'TMessage, 'TRollback>) = 
         match this with
-        | RewindableResult.Ok(v,msgs,rs) -> failwithf "RewindableResult was a success: %A - %s" v (String.Join(Environment.NewLine, msgs |> Seq.map (fun x -> x.ToString())))
-        | RewindableResult.Bad(msgs,rs) -> msgs
+        | RewindableResult.Ok(v,msgs,_) -> failwithf "RewindableResult was a success: %A - %s" v (String.Join(Environment.NewLine, msgs |> Seq.map (fun x -> x.ToString())))
+        | RewindableResult.Bad(msgs,_) -> msgs
 
     /// Returns the result or fails if the result was an error.
     [<Extension>]
     static member inline SucceededWith(this:RewindableResult<'TSuccess, 'TMessage, 'TRollback>) : 'TSuccess = 
         match this with
-        | RewindableResult.Ok(v,_msgs,rs) -> v
-        | RewindableResult.Bad(msgs,rs) -> failwithf "RewindableResult was an error: %s" (String.Join(Environment.NewLine, msgs |> Seq.map (fun x -> x.ToString())))
+        | RewindableResult.Ok(v,_msgs,_) -> v
+        | RewindableResult.Bad(msgs,_) -> failwithf "RewindableResult was an error: %s" (String.Join(Environment.NewLine, msgs |> Seq.map (fun x -> x.ToString())))
 
     /// Joins two results. 
     /// If both are a success the resultSelector Func is applied to the values and the existing success messages are propagated.
