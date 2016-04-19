@@ -21,14 +21,6 @@ We start by referencing Chessie and opening the ErrorHandling module:
 
 open Chessie.ErrorHandling
 
-(**
- Now we define some simple validation functions:
-*)
-
-type Request = 
-    { Name : string
-      EMail : string }
-
 let rng = System.Random()
 
 let emptyFuel() =
