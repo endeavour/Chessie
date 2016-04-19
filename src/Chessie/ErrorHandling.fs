@@ -69,11 +69,11 @@ module Trial =
 
     /// Wraps a value in a Success and adds a message
     let inline warn<'TSuccess,'TMessage,'TRollback> (msg:'TMessage) (x:'TSuccess) : Result<'TSuccess,'TMessage, 'TRollback> = Ok(x,[msg], [])
-    let inline warnWithRollback<'TSuccess,'TMessage,'TRollback> (msg:'TMessage) (rollback:'TRollback) (x:'TSuccess) : Result<'TSuccess,'TMessage, 'TRollback> = Ok(x,[msg], [rollback])
+    let inline warnWithRollback<'TSuccess,'TMessage,'TRollback> (rollback:'TRollback) (msg:'TMessage) (x:'TSuccess) : Result<'TSuccess,'TMessage, 'TRollback> = Ok(x,[msg], [rollback])
 
     /// Wraps a message in a Failure
     let inline fail<'TSuccess,'Message,'TRollback> (msg:'Message) : Result<'TSuccess,'Message,'TRollback> = Bad([ msg ], [])
-    let inline failWithRollback<'TSuccess,'Message,'TRollback> (msg:'Message) (rollback : 'TRollback) : Result<'TSuccess,'Message,'TRollback> = Bad([ msg ], [ rollback ])
+    let inline failWithRollback<'TSuccess,'Message,'TRollback> (rollback : 'TRollback) (msg:'Message) : Result<'TSuccess,'Message,'TRollback> = Bad([ msg ], [ rollback ])
 
     /// Executes the given function on a given success or captures the exception in a failure
     let inline Catch f x = Result<_,_,_>.Try(fun () -> f x)
@@ -209,6 +209,20 @@ module Trial =
       match result with
       | Warn (_,msgs,rs) -> Bad (msgs,rs)
       | _             -> result 
+
+    let inline rollback (result:Result<_,_,unit->unit>) =
+      match result with
+      | Ok(_,_,rs) | Bad (_, rs) ->
+        rs
+        |> List.rev
+        |> List.fold ((>>)) (ignore<unit>)
+
+    let inline asyncRollback (result:Result<_,_,Async<unit>>) =
+      match result with
+      | Ok(_,_,rs) | Bad (_, rs) ->
+        rs
+        |> List.rev
+        |> List.fold (fun acc n -> async.Combine(acc,n)) (async.Zero())
 
     /// Builder type for error handling computation expressions.
     type TrialBuilder() = 

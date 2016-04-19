@@ -24,6 +24,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "content", "content", "{8E6D
 		docs\content\index.md = docs\content\index.md
 		docs\content\pass-warn-fail.fsx = docs\content\pass-warn-fail.fsx
 		docs\content\railway.fsx = docs\content\railway.fsx
+		docs\content\rollbacktest.fsx = docs\content\rollbacktest.fsx
 	EndProjectSection
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Chessie", "src\Chessie\Chessie.fsproj", "{5C095A65-1BF4-4C24-82D2-A07E8C258789}"
