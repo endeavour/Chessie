@@ -36,8 +36,8 @@ let checkName getName msg request =
     else  // no issues, proceed on the "happy path"
           request |> pass
 
-let checkFirstName  = checkName (fun {FullName = (name,_)} -> name) "First name is missing"
-let checkLastName   = checkName (fun {FullName = (_,name)} -> name) "Last name is missing"
+let checkFirstName : Applicant -> SimpleResult<Applicant,string> = checkName (fun {FullName = (name,_)} -> name) "First name is missing"
+let checkLastName  : Applicant -> SimpleResult<Applicant,string> = checkName (fun {FullName = (_,name)} -> name) "Last name is missing"
 
 let checkAge request =
   let dob   = request.DateOfBirth
@@ -61,10 +61,10 @@ let checkApplicant request =
 
 let processRequest request = 
   match checkApplicant request with
-  | Pass  _       ->  printfn "All Good!!!"
-  | Warn (_,log)  ->  printfn "Got some issues:"
-                      for msg in log do printfn "  %s" msg
-  | _             ->  printfn "Something went horribly wrong."
+  | Pass  (_,_)     ->  printfn "All Good!!!"
+  | Warn (_,log,_)  ->  printfn "Got some issues:"
+                        for msg in log do printfn "  %s" msg
+  | _               ->  printfn "Something went horribly wrong."
 
             
 // good request
@@ -99,11 +99,11 @@ let recheckApplicant request =
 
 let reportMessages request =
   match recheckApplicant request with
-  | Pass  _       ->  printfn "Nothing to report"
-  | Warn (_,log)  ->  printfn "Got some issues:"
-                      for msg in log do printfn "  %s" msg
-  | Fail  errors  ->  printfn "Got errors:"
-                      for msg in errors do printfn "  %s" msg
+  | Pass  _          ->  printfn "Nothing to report"
+  | Warn (_,log,_)   ->  printfn "Got some issues:"
+                         for msg in log do printfn "  %s" msg
+  | Fail (errors,rs) ->  printfn "Got errors:"
+                         for msg in errors do printfn "  %s" msg
 
 // terminal request
 reportMessages {FullName      = "John","Smith" 
@@ -147,8 +147,8 @@ let ``processRequest (again)`` request =
                 |> failOnWarnings
   // now we only have 2 tracks on which the data may lay
   match result with
-  | Fail errors ->  for x in errors do printfn "ERROR! %s" x
-  | _           ->  printfn "SUCCESS!!!"
+  | Fail (errors,rs) ->  for x in errors do printfn "ERROR! %s" x
+  | _                ->  printfn "SUCCESS!!!"
 
 // terminal request
 ``processRequest (again)`` {FullName      = "","" 

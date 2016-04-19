@@ -25,7 +25,7 @@ let validate3 input =
     if input.EMail = "" then fail "Email must not be blank"
     else ok input
 
-let combinedValidation : Request -> RewindableResult<_,_,unit> = 
+let combinedValidation : Request -> SimpleResult<_,_> = 
     // connect the two-tracks together
     validate1
     >> bind validate2

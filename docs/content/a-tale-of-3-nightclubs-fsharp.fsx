@@ -178,7 +178,8 @@ The usage is the same as above:
 
 let person = { Person.Gender = Male; Age = 59; Clothes = set ["Jeans"]; Sobriety = Paralytic }
 
-GayBar.costToEnter person
+let result : SimpleResult<decimal,string> = GayBar.costToEnter person
+result
 // val it : Result<decimal,string> = Error: Too old!
 // Smarten up!
 // Sober up!

@@ -46,7 +46,7 @@ let validate3 input =
     if input.EMail = "" then fail "Email must not be blank"
     else ok input
 
-let combinedValidation = 
+let combinedValidation : Request -> SimpleResult<_,_> = 
     // connect the two-tracks together
     validate1
     >> bind validate2
@@ -99,8 +99,8 @@ let updateDatabase input =
 
 
 let log twoTrackInput = 
-    let success(x,msgs) = printfn "DEBUG. Success so far."
-    let failure msgs = printf "ERROR. %A" msgs
+    let success(x,msgs,rs) = printfn "DEBUG. Success so far."
+    let failure (msgs,rs) = printf "ERROR. %A" msgs
     eitherTee success failure twoTrackInput 
 
 let usecase2 = 
