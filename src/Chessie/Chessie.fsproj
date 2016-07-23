@@ -68,6 +68,7 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="ErrorHandling.fs" />
+    <Compile Include="ChessieExtensions.fs" />
     <None Include="paket.references" />
     <None Include="paket.template" />
   </ItemGroup>
