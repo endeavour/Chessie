@@ -1,35 +1,38 @@
 {
-    "version": "0.4.0",
-    "authors": ["Steffen Forkmann", "Max Malook", "Tomasz Heimowski"],
-    "description": "Railway-oriented programming for .NET",
-    
-    "compilationOptions": {
-    },
-    
-    "tools": {
-        "dotnet-mergenupkg": { "target": "package", "version": "0.9.*" }	
-    },
-
+  "version": "0.6.0",
+  "buildOptions": {
+    "debugType": "portable",
     "compilerName": "fsc",
-    "compileFiles": [
+    "define": [],
+    "xmlDoc": true,
+    "compile": {
+      "includeFiles": [
         "ErrorHandling.fs"
-    ],
-
-    "frameworks": {
-        "net46": {
-            "dependencies": {
-                "FSharp.Core": "4.0.0.1"
-             }
-        },
-        "netstandard1.5": { 
-            "dependencies": {
-                "Microsoft.FSharp.Core.netcore": "1.0.0-alpha-151221",
-                "NETStandard.Library": "1.0.0-rc2-23811"
-            },
-            "imports": [
-                "dnxcore50",
-                "portable-net45+win81"
-            ]
-        }
+      ]
     }
+  },
+  "dependencies": {
+    "NETStandard.Library": "1.6.0",
+    "FSharp.Core": "4.0.1.7-alpha"
+  },
+  "frameworks": {
+    "netstandard1.6": {
+      "buildOptions": {
+        "define": [
+          "NETSTANDARD1_5",
+          "CORE_CLR"
+        ]
+      }
+    }
+  },
+  "tools": {
+    "dotnet-compile-fsc": {
+      "version": "1.0.0-preview2-*",
+      "imports": "dnxcore50"
+    },
+    "dotnet-mergenupkg": {
+      "target": "package",
+      "version": "1.0.*"
+    }
+  }
 }

@@ -3,6 +3,7 @@
 // --------------------------------------------------------------------------------------
 
 #r @"packages/build/FAKE/tools/FakeLib.dll"
+#r @"packages/build/FAKE/tools/Newtonsoft.Json.dll"
 
 open Fake
 open Fake.Git
@@ -234,7 +235,7 @@ Target "GenerateHelpDebug" (fun _ ->
     generateHelp' true true
 )
 
-Target "KeepRunning" (fun _ ->    
+Target "KeepRunning" (fun _ ->
     use watcher = new FileSystemWatcher(DirectoryInfo("docs/content").FullName,"*.*")
     watcher.EnableRaisingEvents <- true
     watcher.Changed.Add(fun e -> generateHelp false)
@@ -329,34 +330,37 @@ Target "BuildPackage" DoNothing
 
 
 // --------------------------------------------------------------------------------------
-// .NET CLI and .NET Core
+// .NET Core SDK and .NET Core
 
 let assertExitCodeZero x = if x = 0 then () else failwithf "Command failed with exit code %i" x
-let netcoreFW = "netstandard1.5"
 
-Target "DotnetCliBuild" (fun _ ->
-    Shell.Exec("dotnet", "restore") |> assertExitCodeZero
-    Shell.Exec("dotnet", sprintf "--verbose build --framework %s --configuration Release" netcoreFW, "src/Chessie") |> assertExitCodeZero
+Target "SetVersionInProjectJSON" (fun _ ->
+    !! "./**/project.json"
+    |> Seq.iter (DotNet.SetVersionInProjectJson release.NugetVersion)
 )
 
-Target "DotnetCliRunTests" (fun _ ->
-    // Run tests (Chessie.Tests)
-    Shell.Exec("dotnet", sprintf "--verbose run --framework %s --configuration Release" netcoreFW, "tests/Chessie.Tests") |> assertExitCodeZero
+Target "Build.NetCore" (fun _ ->
+    DotNet.Restore id
 
-    // Run tests (Chessie.CSharp.Test) 
-    Shell.Exec("dotnet", sprintf "--verbose run --framework %s --configuration Release" netcoreFW, "tests/Chessie.CSharp.Test") |> assertExitCodeZero
+    !! "src/**/project.json"
+    |> DotNet.Build id
 )
 
-let isDotnetCLIInstalled = Shell.Exec("dotnet", "--version") = 0
+Target "RunTests.NetCore" (fun _ ->
+    !! "tests/**/project.json"
+    |> DotNet.Test id
+)
 
-Target "AddNetcoreToNupkg" (fun _ ->
-    let nupkg = sprintf "../../temp/Chessie.%s.nupkg" (release.AssemblyVersion)
+let isDotnetSDKInstalled = DotNet.isInstalled()
 
-    Shell.Exec("dotnet", "--verbose pack --configuration Release", "src/Chessie") |> assertExitCodeZero
+Target "Nuget.AddNetCore" (fun _ ->
+    !! "src/**/project.json"
+    |> DotNet.Pack id
 
-    let netcoreNupkg = sprintf "bin/Release/Chessie.%s.nupkg" (release.AssemblyVersion)
+    let nupkg = sprintf "../../temp/Chessie.%s.nupkg" (release.NugetVersion)
+    let netcoreNupkg = sprintf "bin/Release/Chessie.%s.nupkg" (release.NugetVersion)
 
-    Shell.Exec("dotnet", sprintf """mergenupkg --source "%s" --other "%s" --framework "%s" """ nupkg netcoreNupkg netcoreFW, "src/Chessie/") |> assertExitCodeZero
+    Shell.Exec("dotnet", sprintf """mergenupkg --source "%s" --other "%s" --framework netstandard1.6 """ nupkg netcoreNupkg, "src/Chessie/") |> assertExitCodeZero
 )
 
 // --------------------------------------------------------------------------------------
@@ -366,10 +370,11 @@ Target "All" DoNothing
 
 "Clean"
   ==> "AssemblyInfo"
+  ==> "SetVersionInProjectJSON"
   ==> "Build"
-  =?> ("DotnetCliBuild", isDotnetCLIInstalled)
+  =?> ("Build.NetCore", isDotnetSDKInstalled)
   ==> "RunTests"
-  =?> ("DotnetCliRunTests", isDotnetCLIInstalled)
+  =?> ("RunTests.NetCore", isDotnetSDKInstalled)
   =?> ("GenerateReferenceDocs",isLocalBuild)
   =?> ("GenerateDocs",isLocalBuild)
   ==> "All"
@@ -381,7 +386,7 @@ Target "All" DoNothing
   =?> ("SourceLink", Pdbstr.tryFind().IsSome )
 #endif
   ==> "NuGet"
-  =?> ("AddNetcoreToNupkg", isDotnetCLIInstalled)
+  =?> ("Nuget.AddNetCore", isDotnetSDKInstalled)
   ==> "BuildPackage"
 
 "CleanDocs"
